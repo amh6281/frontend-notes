@@ -197,3 +197,101 @@ console.log(func1 === func2); // false (다른 객체, 다른 참조)
 
 - **원시 타입**: 값 자체를 저장한다.
 - **객체 타입**: 객체가 저장된 메모리 위치(reference)를 저장한다.
+
+---
+
+## 객체 기반 자료구조 (Object / Array / Map / Set)
+
+`Array`, `Map`, `Set`은 모두 객체를 기반으로 만들어진 특수한 객체다. 저장하는 방식과 잘하는 일이 다르다.
+
+- **Object** : 이름(키)으로 값을 찾는다
+- **Array** : 순서(인덱스)로 값을 찾는다
+- **Map** : 이름으로 값을 찾되, 키에 아무 타입이나 쓸 수 있다
+- **Set** : 값만 저장하고 중복을 허용하지 않는다
+
+|             | Object                  | Array           | Map                     | Set             |
+| ----------- | ----------------------- | --------------- | ----------------------- | --------------- |
+| 무엇을 저장 | 키 - 값                 | 값 (순서 있음)  | 키 - 값                 | 값 (중복 없음)  |
+| 키 타입     | 문자열, 심벌만          | 숫자 인덱스     | **모든 타입** (객체도)  | —               |
+| 순서        | 보장되지 않음           | 보장            | **삽입 순서 보장**      | 삽입 순서 보장  |
+| 크기 확인   | `Object.keys(o).length` | `arr.length`    | `map.size`              | `set.size`      |
+| 중복        | 키 중복 불가            | 값 중복 허용    | 키 중복 불가            | **값 중복 불가**|
+| 이터러블    | ❌                      | ✅              | ✅                      | ✅              |
+| JSON 변환   | 바로 가능               | 바로 가능       | 불가 (변환 필요)        | 불가 (변환 필요)|
+
+```ts
+// Object
+const obj = { name: "kim" };
+obj.age = 20;
+
+// Map
+const map = new Map();
+map.set("name", "kim");
+map.get("name"); // 'kim'
+
+// Set
+const set = new Set([1, 2, 2, 3]);
+console.log(set); // Set(3) {1, 2, 3} ← 중복 제거
+```
+
+#### Object 대신 Map을 쓰면 무엇이 좋은가?
+
+- **키에 아무 타입이나 쓸 수 있다.** 객체는 키가 항상 문자열로 변환되지만, Map은 객체나 함수도 키로 쓸 수 있다.
+
+```ts
+const obj = {};
+obj[1] = "a";
+console.log(Object.keys(obj)); // ['1'] ← 숫자 1이 문자열로 변환됨
+
+const map = new Map();
+map.set(1, "a");
+map.set("1", "b"); // 숫자 1과 문자열 '1'을 구분한다
+```
+
+- **프로토타입 키와 충돌하지 않는다.** 객체는 `toString`, `constructor` 같은 상속받은 키가 이미 존재한다.
+
+```ts
+const obj = {};
+console.log(obj.toString); // ƒ toString() ← 넣은 적 없는데 값이 있다
+
+const map = new Map();
+console.log(map.get("toString")); // undefined
+```
+
+- **크기를 바로 알 수 있고**(`size`), **추가·삭제가 잦은 데이터에 유리하다.**
+
+> 반대로 JSON으로 주고받는 데이터, 형태가 고정된 데이터는 Object가 편하다. Map은 `JSON.stringify`가 되지 않는다.
+
+#### Set은 언제 쓰는가?
+
+**중복 제거**와 **포함 여부 확인**에 쓴다.
+
+```ts
+const arr = [1, 2, 2, 3, 3];
+
+const unique = [...new Set(arr)]; // [1, 2, 3] ← 가장 흔한 사용법
+```
+
+배열의 `includes`는 앞에서부터 전부 훑기 때문에 원소가 많을수록 느려지지만(O(n)), `Set.has`는 개수와 무관하게 빠르다(O(1)).
+
+```ts
+arr.includes(3); // 원소 개수에 비례해 느려진다
+set.has(3); // 항상 빠르다
+```
+
+#### WeakMap과 WeakSet은 무엇인가?
+
+키를 **약하게 참조**하는 Map/Set이다. 다른 곳에서 그 객체를 더 이상 참조하지 않으면, WeakMap에 들어 있어도 가비지 컬렉션의 대상이 된다.
+
+```ts
+let user = { name: "kim" };
+const map = new Map();
+const weak = new WeakMap();
+
+map.set(user, "data"); // Map은 user를 붙잡고 있어 메모리에서 해제되지 않는다
+weak.set(user, "data"); // WeakMap은 붙잡지 않는다
+
+user = null; // weak에 있던 항목은 자동으로 정리된다
+```
+
+DOM 요소에 부가 정보를 붙여둘 때처럼, **원본이 사라지면 같이 사라져야 하는 데이터**에 쓴다. 키는 객체만 가능하고, 순회할 수 없다.
